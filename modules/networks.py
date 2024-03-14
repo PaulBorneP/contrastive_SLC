@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import math
 
-__all__ = ['ResNet', ]
 
 class MLPHead(nn.Module):
     def __init__(self, in_channels, mlp_hidden_size, projection_size):
@@ -71,7 +70,7 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_feats=128, width=1, in_channel=3, mi=False):
+    def __init__(self, block, layers, num_feats=128, width=1, in_channel=1, mi=False):
         super(ResNet, self).__init__()
 
         self._norm_layer = nn.BatchNorm2d
