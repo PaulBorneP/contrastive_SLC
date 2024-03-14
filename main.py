@@ -2,7 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from modules.losses import hard_neg_loss
+from modules.losses import HardNegLoss
 from modules.networks import ResNet18
 
 
@@ -26,6 +26,7 @@ class Trainer:
         # self.val_unfold_stride = args.val_unfold_stride
         self.eval_freq = args.eval_freq
         self.save_freq = args.save_freq
+        self.criterion = HardNegLoss(batch_size=self.train_pbatch_size, device=self.device)
 
 
 
@@ -97,8 +98,8 @@ class Trainer:
         r_feature = F.normalize(r_feature, dim=1)
         r_feature = F.normalize(r_feature, dim=1)
 
-        loss = hard_neg_loss(r_feature, i_feature,
-                                batch_size=self.train_pbatch_size,device=self.device)
+        loss = self.criterion(r_feature, i_feature)
+
         return loss
 
     # def patchize(self, img: torch.Tensor, patch_size, unfold_stride) -> torch.Tensor:
