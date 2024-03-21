@@ -3,8 +3,6 @@ import torch
 from modules.networks import ResNet18
 import wandb
 
-import torch.nn.functional as F
-
 from modules.trainer import Trainer
 
 
