@@ -1,3 +1,5 @@
+# adapted from https://github.com/Yusin2Chen/self-supervised_change_detetction Copyright (c) 2021 Yusin Chen
+
 import torch
 from typing import List
 import torch
