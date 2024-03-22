@@ -76,7 +76,7 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_feats=4, width=1, in_channel=1, mi=False, r_stride=[1, 1, 2, 2], do_input_conv=True, do_inputmaxpool=True):
+    def __init__(self, block, layers, num_feats=4, width=1, in_channel=1, mi=False, r_stride=[1, 1, 2, 2], do_input_conv=True, do_input_maxpool=True):
         super(ResNet, self).__init__()
 
         self._norm_layer = nn.BatchNorm2d
@@ -88,7 +88,7 @@ class ResNet(nn.Module):
             self._norm_layer(self.inplanes),
             nn.ReLU(inplace=True)) if do_input_conv else nn.Identity()
         self.maxpool = nn.MaxPool2d(
-            kernel_size=3, stride=2, padding=1) if do_inputmaxpool else nn.Identity()
+            kernel_size=3, stride=2, padding=1) if do_input_maxpool else nn.Identity()
         self.layer1 = self._make_layer(
             block, self.base, layers[0], stride=r_stride[0])  # default stride 1
         self.layer2 = self._make_layer(

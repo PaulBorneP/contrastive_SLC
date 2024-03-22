@@ -3,6 +3,8 @@
 import numpy as np
 from scipy import signal
 
+M = 10.089038980848645 # what is this ?
+m = -1.429329123112601 # what is this ?
 
 def symetrise_real_and_imaginary_parts(real_part: np.array, imag_part: np.array) -> 'tuple[np.array, np.array]':
     """Symetrise given real and imaginary parts to ensure MERLIN properties
@@ -68,3 +70,30 @@ def symetrise_real_and_imaginary_parts(real_part: np.array, imag_part: np.array)
     ima2 = np.fft.ifft2(np.fft.ifftshift(Sf))
 
     return np.real(ima2), np.imag(ima2)
+
+
+def sar_normalization(sar_patch: np.array) -> 'tuple[np.array, np.array]':
+    normalized_sar = np.zeros(sar_patch.shape) # P x 2 x H x W
+    for i in range(sar_patch.shape[0]):
+        real_part = sar_patch[i, 0, :, :]
+        imag_part = sar_patch[i, 1, :, :]
+        normalized_sar[i, 0, :, :] = real_im_norm(real_part)
+        normalized_sar[i, 1, :, :] = real_im_norm(imag_part)
+
+    return normalized_sar
+
+def real_im_norm(real_part: np.array)-> np.array:
+    """Normalize the real part of the noisy image /!\ also works for the imaginary part
+
+    Args:
+        real_part / imaginary part (numpy array): real part of the noisy image to normalize
+
+    Returns:
+        numpy array: normalized real / imaginary part part of the noisy image
+    """
+
+    log_norm = (np.log(real_part**2+1e-3 )-2*m)/(2*M)
+
+    return log_norm
+
+
