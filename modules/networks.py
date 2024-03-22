@@ -76,7 +76,7 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_feats=4, width=1, in_channel=1, mi=False, r_stride=[1, 1, 2, 2], do_input_conv=True, do_input_maxpool=True):
+    def __init__(self, block, layers, num_feats=4, width=1, in_channel=1, mi=False):
         super(ResNet, self).__init__()
 
         self._norm_layer = nn.BatchNorm2d
@@ -86,17 +86,17 @@ class ResNet(nn.Module):
             nn.Conv2d(in_channel, self.inplanes, kernel_size=7,
                       stride=1, padding=3, bias=False),
             self._norm_layer(self.inplanes),
-            nn.ReLU(inplace=True)) if do_input_conv else nn.Identity()
+            nn.ReLU(inplace=True)) 
         self.maxpool = nn.MaxPool2d(
-            kernel_size=3, stride=2, padding=1) if do_input_maxpool else nn.Identity()
+            kernel_size=3, stride=2, padding=1) 
         self.layer1 = self._make_layer(
-            block, self.base, layers[0], stride=r_stride[0])  # default stride 1
+            block, self.base, layers[0], stride=1)  
         self.layer2 = self._make_layer(
-            block, self.base * 2, layers[1], stride=r_stride[1])  # default stride 1
+            block, self.base * 2, layers[1], stride=1) 
         self.layer3 = self._make_layer(
-            block, self.base * 4, layers[2], stride=r_stride[2])  # default stride 2
+            block, self.base * 4, layers[2], stride=2) 
         self.layer4 = self._make_layer(
-            block, self.base * 8, layers[3], stride=r_stride[3])  # default stride 2
+            block, self.base * 8, layers[3], stride=2) 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         if mi:
