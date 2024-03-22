@@ -12,6 +12,7 @@ data/*
 
 #wandb
 wandb/*
+checkpoints/*
 
 # Icon must end with two \r
 Icon

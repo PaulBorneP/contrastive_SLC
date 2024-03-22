@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
 
-from IPython import get_ipython; 
-get_ipython().run_line_magic('reset', '-sf')
+# from IPython import get_ipython; 
+# get_ipython().run_line_magic('reset', '-sf')
 
 # Définition du répertoire de travail
 import os
-os.chdir('c:\\[00]-DATA_CAK\\2023_MVA_ENS\\S2-Remote_Sensing\\PROJET\\Code')
 
 import numpy as np
 import random
 import torch
-from mvalab import *
-
+from database.utils import imaread
 import time
 
 #______________________________________________________________________________
@@ -449,7 +447,7 @@ class BatchMaker:
         self.area_ref_M0 = Area
         del Area, ind_list
         
-    def make_batch_M0(self,P, patch_size, channel_list='All'):
+    def make_batch_M0(self,P, patch_size, channel_list='All',preprocess=False):
         '''
         Cette fonction crée "P" patchs de taille "patch_size" selon la méthode suivante:
             - les patchs sont choisis aléatoirement selon une grille cartesienne sans recouvrement
@@ -467,6 +465,9 @@ class BatchMaker:
         channel_list : liste d'entiers
             Les patchs sont choisis dans les images de canal appartenant à cette liste.
             La valeur par défaut ('All') permet de choisir tous les canaux
+        preprocess : booléen
+            Applique la normalisation des patchs et symétrisation des parties 
+            réelles et imaginaires
         
 
         Returns
@@ -511,13 +512,18 @@ class BatchMaker:
                                   ind_list[i][0],ind_list[i][1],
                                   patch_size[0],patch_size[1])
             
+            
             Area[ind_list[i]] = False   # la position choisie n'est plus disponible
             _ = ind_list.pop(i)         # idem
             
+        if preprocess:
+            from transforms import sar_normalization, symetrise_real_and_imaginary_parts
+            Batch = sar_normalization(Batch)
+            Batch = symetrise_real_and_imaginary_parts(Batch)
             
         return Batch, Area
             
-    def make_batch_M1(self,P, patch_size, channel_list='All'):
+    def make_batch_M1(self,P, patch_size, channel_list='All',preprocess=False):
         '''
         Cette fonction crée "P" patchs de taille "patch_size" selon la méthode suivante:
             - les patchs sont choisis aléatoirement dans toute l'image
@@ -534,6 +540,9 @@ class BatchMaker:
         channel_list : liste d'entiers
             Les patchs sont choisis dans les images de canal appartenant à cette liste.
             La valeur par défaut ('All') permet de choisir tous les canaux
+        preprocess : booléen
+            Applique la normalisation des patchs et symétrisation des parties 
+            réelles et imaginaires
         
 
         Returns
@@ -578,18 +587,23 @@ class BatchMaker:
             
             Area[ind_list[i]] = False   # la position choisie n'est plus disponible
             _ = ind_list.pop(i)         # idem
-            
-            
+
+            #convert to float32
+        if preprocess:
+            from transforms import sar_normalization, symetrise_real_and_imaginary_parts
+            Batch = sar_normalization(Batch)
+            Batch = symetrise_real_and_imaginary_parts(Batch)
+
         return Batch, Area
+    
+
+
         
         
 
 
 
        
-
-
-
 
 
 

@@ -6,14 +6,18 @@ import torch.nn.functional as F
 import wandb.wandb_run
 from modules.losses import HardNegLoss
 
+from database.dataloader import BatchMaker
+
 from typing import Any, Dict
 import os
 import torch
 
 import wandb
+from tqdm import tqdm
+
 
 class Trainer:
-    def __init__(self, args: Any, online_network: nn.Module, target_network: nn.Module, optimizer: torch.optim.Optimizer, device: torch.device, logger:wandb.wandb_run.Run  = None):
+    def __init__(self, online_network: nn.Module, target_network: nn.Module, optimizer: torch.optim.Optimizer, device: torch.device, n_iter: int = 30000, logger: wandb.wandb_run.Run = None, save_freq: int = 1000, batch_size: int = 50, patch_size=24, save_path: str = 'checkpoints'):
         """
         Initialize the Trainer class.
 
@@ -28,58 +32,40 @@ class Trainer:
 
         self.online_network = online_network
         self.target_network = target_network
+        self.online_network.train()
+        self.target_network.train()
         self.optimizer = optimizer
         self.device = device
-        self.savepath = args.save_path
-        self.max_epochs = args.epochs
+        self.savepath = save_path
+
+        self.max_iter = n_iter
         self.m = 0.996
-        self.pbatch_size = args.pbatch_size
-        self.train_pbatch_size = int(args.pbatch_size * 0.5)
-        self.eval_freq = args.eval_freq
-        self.save_freq = args.save_freq
-        self.criterion = HardNegLoss(batch_size=self.train_pbatch_size, device=self.device)
+        self.batch_size = batch_size
+        self.patch_size = patch_size
+        self.save_freq = save_freq
+        self.criterion = HardNegLoss(
+            batch_size=self.batch_size, device=self.device)
         self.logger = logger
 
-    def train(self, train_loader: Any, eval_loader: Any) -> None:
-        """
-        Train the model.
-
-        Args:
-            train_loader (Any): Training data loader.
-            eval_loader (Any): Evaluation data loader.
-        """
-        niter = 0
-        for epoch_counter in range(self.max_epochs):
-            train_loss = 0.0
-            for idx, batch in enumerate(train_loader):
-                patches = batch['image'].squeeze(0).to(self.device)
-                P, C, pH, pW = patches.shape
-                shuffle_ids = torch.randperm(P).to(self.device)
-                this_patches = patches[shuffle_ids]
-                quotient, remainder = divmod(P, self.train_pbatch_size)
-                pbatch = quotient if quotient > 0 else remainder
-                for i in range(pbatch):
-                    start = i * self.train_pbatch_size
-                    end = start + self.train_pbatch_size
-                    patch = this_patches[start:end, :, :, :]
-                    loss = self.update(patch)
-                    self.optimizer.zero_grad()
-                    loss.backward()
-                    self.optimizer.step()
-                    niter += 1
-                    train_loss += loss.item()
-                train_loss = train_loss / self.pbatch_size
-                print('Epoch: {} \tTraining Loss: {:.6f}'.format(epoch_counter, train_loss))
-                self.logger.log({'train_loss': train_loss})
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-            # if (epoch_counter + 1) % self.eval_freq == 0:
-            #     self.validate(eval_loader)
-            #     self.online_network.train()
-            if (epoch_counter + 1) % self.save_freq == 0:
-                if not os.path.exists(self.savepath):
-                    os.makedirs(self.savepath)
-                self.save_model(os.path.join(self.savepath, 'MIE_epoch_{epoch}_{loss}.pth'.format(epoch=epoch_counter, loss=train_loss)))
+    def train(self, train_batch_maker: BatchMaker) -> None:
+        for i in tqdm(range(self.max_iter)):
+            self.optimizer.zero_grad()
+            batch, _ = train_batch_maker.make_batch_M0(
+                self.batch_size, self.patch_size)
+            batch = torch.tensor(batch, dtype=torch.float32).to(self.device)
+            # check if double or float
+            loss = self.update(batch)
+            # log loss
+            self.logger.log({'loss': loss.item()})
+            loss.backward()
+            self.optimizer.step()
+            if i % self.save_freq == 0:
+                torch.save(self.online_network.state_dict(),
+                           os.path.join(self.savepath, f'online_{i}.pth'))
+                torch.save(self.target_network.state_dict(),
+                           os.path.join(self.savepath, f'target_{i}.pth'))
+            if i % 100 == 0:
+                tqdm.write(f'Loss at iteration {i}: {loss.item()}')
 
     def update(self, image: torch.Tensor) -> torch.Tensor:
         """
@@ -99,5 +85,3 @@ class Trainer:
         r_feature = F.normalize(r_feature, dim=1)
         loss = self.criterion(r_feature, i_feature)
         return loss
-        
-
