@@ -12,8 +12,8 @@ import numpy as np
 import random
 import torch
 from mvalab import *
+from transforms import *
 
-import time
 
 #______________________________________________________________________________
 #                           FONCTIONS SUPPORTS
@@ -279,130 +279,6 @@ def Contrastive_Loss(batch_Teacher, batch_Student):
     
     return loss
 
-#______________________________________________________________________________
-#                           GENERATEUR DE PATCHS : v1
-#______________________________________________________________________________
-class Sample_Generator:
-    def __init__(self, data_path):
-        
-        data,w_img,h_img,nk_img,_ = imaread(data_path,ncan=0)
-        self.path       = data_path
-        self.teacher    = 'Real'
-        self.student    = 'Imag'
-        self.data       = data
-        self.Re         = np.real(data)
-        self.Im         = np.imag(data)
-        self.img        = data
-        self.h_img      = h_img
-        self.w_img      = w_img
-        
-        del data,w_img,h_img,nk_img
-        
-    def create_sample(self,Channel,N_patch,h_patch,w_patch,method='random'):
-        '''
-        Cette fonction fournit un échantillon de patchs dont la définition est 
-        cohérente de celle de l'équation (2) de l'article universitaire:
-            - 1er position   : POSITIF | Teacher
-            - 2°  position   : POSITIF | Student
-            - 3° --> N_patch : NEGATIF | Student
-        Le nombre de patch dans l'échantillon est "N_patch' issus de l'image du
-        canal "Channel".
-        La taille des patchs est (h_patch,w_patch).
-        Le patch POSITIF est choisi selon la méthode "method".
-        La dimension de l'échantillon est [N_patch x h_patch x w_patch]
-            
-        Parameters
-        ----------
-        Channel : integer
-            Valeur du canal dans lequel est sélectionnée l'image dont on extrait 
-            les patchs.
-        N_patch : integer
-            Nombre de patchs présents dans l'échantillon.
-        h_patch : integer
-            Nombre de pixels des patchs selon l'axe 0 (height)
-        w_patch : integer
-            Nombre de pixels des patchs selon l'axe 1 (width)
-        method : string, optional
-            Identifiant de la méthode utilisée pour extraire le patch POSITIF.
-            The default is 'random'.
-
-        Returns
-        -------
-        Sample : np.array [N_patch x h_patch x w_patch]
-            Tableau contenant les patchs extraits. L'agencement des patchs est 
-            cohérent de la convention utilisée dans l'équation (2) de l'article.
-        Ind_Pori : Liste de tuples
-            Liste contenant les indices des pixels origine de chaque patch sous forme de tuple.
-            Les deux premiers tuples sont identiques car correspondant au patch POSITIF
-            extrait sur Re(img) et Im(img).
-
-        '''
-        #----------------------------------------------------------------------
-        # 0 - CREATION DES INDICES ORIGINES
-        Ind_Pori = []
-        
-        # Patch POSITIF : Position du pixel origine 
-        Area_1, ind_max_h, ind_max_w = create_selection_area(self.h_img,
-                                                             self.w_img,
-                                                             h_patch,
-                                                             w_patch)
-        ind_h0_P, ind_w0_P  = choose_indice_ref_patch(ind_max_h, ind_max_w, method)
-        Area_2              = create_forbiden_area(self.h_img,
-                                                   self.w_img,
-                                                   ind_h0_P,ind_w0_P,
-                                                   h_patch,w_patch)
-        
-        Ind_Pori +=[(ind_h0_P,ind_w0_P)]
-        
-        # Patchs NEGATIFS : Position des pixels origine
-        Ind_Pori += [Ind_Pori[0]]   # la position du patch POSITIF est utilisée pour Re(img) et Im(img)
-        for _ in range(N_patch-2):  # car deux positions sont déjà renseignées
-            flag = False
-            while flag==False:
-                tmp_ind_h   = random.randint(0, ind_max_h)
-                tmp_ind_w   = random.randint(0, ind_max_w)
-                flag        = Area_1[tmp_ind_h,tmp_ind_w] & Area_2[tmp_ind_h,tmp_ind_w]
-            Ind_Pori    +=[(tmp_ind_h,tmp_ind_w)]
-        
-        
-        #----------------------------------------------------------------------
-        # EXTRACTION DES PATCHS
-        # La définition d'un échantillon est cohérente de l'équation (2) de l'article :
-        #   - 1er position   : POSITIF | Teacher
-        #   - 2°  position   : POSITIF | Student
-        #   - 3° --> N_patch : NEGATIF | Student
-        Sample = np.zeros((N_patch,h_patch,w_patch))
-        
-        # Extraction des patchs : Teacher
-        if self.teacher == 'Real':
-            img = self.Re[:,:,Channel]
-        else:
-            img = self.Im[:,:,Channel]
-        
-        ind_h = Ind_Pori[0][0]
-        ind_w = Ind_Pori[0][1]
-        Sample[0,:,:]   = extract_patch(img,
-                                        ind_h,ind_w,
-                                        h_patch,w_patch)
-        
-        # Extraction des patchs : Student
-            # Le premier tuple de Ind_Pori identifie le patch Positif : 
-            # il est utilisée deux fois (1x Teacher + 1x Student)
-        if self.student == 'Real':
-            img = self.Re[:,:,Channel]
-        else:
-            img = self.Im[:,:,Channel]
-        for i in range(1,N_patch):
-            ind_h = Ind_Pori[i][0]       
-            ind_w = Ind_Pori[i][1]
-            Sample[i,:,:]   = extract_patch(img,
-                                            ind_h,ind_w,
-                                            h_patch,w_patch)
-                  
-        return Sample, Ind_Pori
-        
-        
-
 
 #______________________________________________________________________________
 #                           GENERATEUR DE PATCHS : v2
@@ -421,8 +297,22 @@ class BatchMaker:
         
         self.area_ref    = 'None'
         self.area_ref_M0 = 'None'
+        self.img_het     = []
         
         del data,w_img,h_img,nk_img
+    
+    def sym_ReIm(self):
+        """
+        Cette méthode appelle la fonction "symetrise_real_and_imaginary_parts"
+        du fichier "transforms.py". Elle ne s'utilise que sur des les parties
+        réelles et imaginaires d'une même image. Cette méthode doit donc être appelée
+        juste après la création du batch. Elle est irréversible et modifie les 
+        attributs" "self.Re" et "self.Im".
+        """
+        sym_Re, sym_Im =\
+            symetrise_real_and_imaginary_parts(self.Re, self.Im)
+        self.Re = sym_Re 
+        self.Im = sym_Im
         
     def init_area_ref(self,patch_size):
         '''
@@ -442,14 +332,15 @@ class BatchMaker:
     def init_M0(self,patch_size,start='ref'):
         '''
         Cette méthode crée la grille de référence pour la méthode n°0 et la stocke
-        en tant qu'attribut car sa création dure environ 2s et ne peut $donc être 
+        en tant qu'attribut car sa création dure environ 2s et ne peut donc être 
         réalisée à chaque création de patch.'
         '''
         Area, ind_list = create_cart_grid(self.img_size,patch_size,start)
         self.area_ref_M0 = Area
         del Area, ind_list
         
-    def make_batch_M0(self,P, patch_size, channel_list='All'):
+    def make_batch_M0(self,P, patch_size, 
+                      channel_list='All', preproc_norm = True):
         '''
         Cette fonction crée "P" patchs de taille "patch_size" selon la méthode suivante:
             - les patchs sont choisis aléatoirement selon une grille cartesienne sans recouvrement
@@ -466,8 +357,11 @@ class BatchMaker:
                             : w := nombre de pixel du patch selon l'axe 1 (largeur)
         channel_list : liste d'entiers
             Les patchs sont choisis dans les images de canal appartenant à cette liste.
-            La valeur par défaut ('All') permet de choisir tous les canaux
-        
+            La valeur par défaut ('All') permet de choisir tous les canaux.
+        preproc_norm : booléen
+            Réalisation du pré-processing MERLIN sur la normalisation des patchs.
+            Par défaut ce pré-traitement est réalisé
+       
 
         Returns
         -------
@@ -514,10 +408,15 @@ class BatchMaker:
             Area[ind_list[i]] = False   # la position choisie n'est plus disponible
             _ = ind_list.pop(i)         # idem
             
+        # - Pré-traitements
+        if preproc_norm:
+            from transforms import sar_normalization
+            Batch = sar_normalization(Batch)
             
         return Batch, Area
             
-    def make_batch_M1(self,P, patch_size, channel_list='All'):
+    def make_batch_M1(self,P, patch_size, 
+                      channel_list='All', preproc_norm=True):
         '''
         Cette fonction crée "P" patchs de taille "patch_size" selon la méthode suivante:
             - les patchs sont choisis aléatoirement dans toute l'image
@@ -533,9 +432,11 @@ class BatchMaker:
                             : w := nombre de pixel du patch selon l'axe 1 (largeur)
         channel_list : liste d'entiers
             Les patchs sont choisis dans les images de canal appartenant à cette liste.
-            La valeur par défaut ('All') permet de choisir tous les canaux
+            La valeur par défaut ('All') permet de choisir tous les canaux        
+        preproc_norm : booléen
+            Réalisation du pré-processing MERLIN sur la normalisation des patchs.
+            Par défaut ce pré-traitement est réalisé
         
-
         Returns
         -------
         Batch : np.array (P,2,patch_size[0],patch_size[1])
@@ -544,7 +445,6 @@ class BatchMaker:
         Area : np.array (self.h_img,self.w_img) de booléns
             Tablea de booléens indiquant les positions des pixesl origine encore
             disponibles pour extraction de patchs
-
         '''
         
         # 1 - Extraction des indices disponibles pour les pixels origines
@@ -579,122 +479,89 @@ class BatchMaker:
             Area[ind_list[i]] = False   # la position choisie n'est plus disponible
             _ = ind_list.pop(i)         # idem
             
-            
+        # - Pré-traitements
+        if preproc_norm:
+            from transforms import sar_normalization
+            Batch = sar_normalization(Batch)
+           
         return Batch, Area
+    
+    def make_img_het(self,channel):
+        """
+        Cette fonction crée une pile de deux images hétérogènes à partir de
+        la pile des image de partie Réelle et Imaginaire. 
+            - La première image est une image de partie réelle choisie 
+            comme celle du canal 'channel[0]'.
+            - La seconde image est une image de partie imaginaire choisie 
+            comme celle du canal 'channel[&]'.
+
+        Parameters
+        ----------
+        channel : tuple
+            Indice des canaux desquels sont exatraites les images de partie 
+            Réelle et Imaginaire.
+        """
+
+        self.img_het = np.stack((self.Re[:,:,channel[0]], self.Re[:,:,channel[1]]))
         
+    def make_batch_inference(self,P, patch_size,ind_avai,
+                             preproc_norm = True):
+        """
+        Cette fonction crée un batch de patchs sous le format [P,2,h_patch,w_patch].
+        La position des pixels de référence de chaque patch est faite selon la méthode
+        suivante : les 'P' premiers tuples de la liste de tuple 'ind_avai' fournissent
+        la position des pixels origine.
+        Les patchs sont extraits de l'attribut ''self.img_het' (cf. méthode 'make_img_het').
+
+        Parameters
+        ----------
+        P : integer
+            Nombre de patch a créer
+        patch_size : tuple (h,w)
+            Taille du patch : h := nombre de pixel du patch selon l'axe 0 (hauteur)
+                            : w := nombre de pixel du patch selon l'axe 1 (largeur)
+        ind_avai : list of tuple
+            Liste des positions des pixels de référence encore disponibles.
+            Chaque position est fournie selon le formalisme (h_pixel,w_pixel).
+            
+        preproc_norm : booléen
+            Réalisation du pré-processing MERLIN sur la normalisation des patchs.
+            Par défaut ce pré-traitement est réalisé
+
+        Returns
+        -------
+        Batch : np.array [P,2,h_patch,w_patch]
+            Tableau fournissant les P patchs extraits de dimension (h_patch,w_patch).
+            [:,0,:,:] : parties Réelles
+            [:,1,:,:] : parties Imagainaires     
+        ind_Batch : list of tuple
+            Liste de taille 'P' fournissant les positions des pixels origines
+            de chaque patch paire de patch
+        ind_remaining : list of tuple
+            Liste de taille fournissant les positions des pixels origines
+            encore disponibles après création des 'P' patchs.
+        """
+        # 1 - Gestion des listes d'indices
+        ind_Batch       = list(ind_avai[:P])
+        ind_remaining   = ind_avai.copy()
+        del ind_remaining[:10]
         
-
-
-
-       
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#______________________________________________________________________________
-#                      ZONE DE TEST DES FONCTIONS
-#______________________________________________________________________________
-# ZONE DE TEST DES FONCTIONS
-if False:
-    # Test : Fonction validée
-    Area, max_h, max_w =  create_selection_area(124,64,3,6)
-    
-    # Test : Fonction validée
-    for _ in range (100):
-        print(choose_indice_ref_patch(15, 8,method='random'))
+        # 2 - Création des patchs : [P,2,h_patch,w_patch]
+        Batch = []
+        for pos in ind_Batch:
+            patch = self.img_het[:,pos[0]:pos[0]+patch_size[0],
+                                 pos[1]:pos[1]+patch_size[1]]
+            Batch.append(patch)
+        Batch = np.array(Batch)
         
+        # - Pré-traitements
+        if preproc_norm :
+            from transforms import sar_normalization
+            Batch = sar_normalization(Batch)
         
-    # Test : Fonction validée
-    Area = create_forbiden_area(h_ref=109,
-                                w_ref=37,
-                                ind_h0_P=1,
-                                ind_w0_P=5,
-                                h0_P=2,
-                                w0_P=8)
+        return Batch, ind_Batch, ind_remaining
     
     
-    # Test : Classe validée
-    import os
-    path     = os.path.join('../database/', 'PileDomancyTSX26.IMA')       
-    GENERATEUR  = Sample_Generator(path)       
-
-    Sampl, Ind = GENERATEUR.create_sample(Channel = 3,
-                                      N_patch = 4,
-                                      h_patch = 500,
-                                      w_patch = 500,
-                                      method='random')
-
-
-# ZONE DE TEST DES CLASSES
-if False:
-    path    = os.path.join('../raw_databases/', 'PileDomancyTSX26.IMA')
-    Batcher = BatchMaker(path)
-    P           = 30
-    patch_size  = (5,7)
-    Batcher.init_area_ref(patch_size)
-    
-    
-    # Test de la méthode M0 : validée
-    Batcher.init_M0(patch_size,start='rand')
-    batch,Area_batch = Batcher.make_batch_M0(P, patch_size, channel_list='All')
-    batch,Area_batch = Batcher.make_batch_M0(P, patch_size, channel_list=[0,6,12])
-    
-    # Test de la méthode M1 : validée
-    batch,Area_batch = Batcher.make_batch_M1(P, patch_size, channel_list='All')
-
-
-
-if False:   # Script initial pour la création de la loss : important car pas évident à trouver
-    # CETTE FACON DE FAIRE EST NICKEL POUR CALCULER LA LOSS SUR UN "BATCH" !!!
-    # RESTE PLUS QU'A CALCULER LA SOMME ET FAIRE LE LOG
-    
-    # Exemple de dimensions
-    N = 5
-    dim = 1000
-    
-    # Création de deux tenseurs T1 et T2
-    T1 = torch.randn(N, dim)
-    T2 = torch.randn(N, dim)
-    
-    # Réplication des tenseurs pour pouvoir soustraire tous les paires de vecteurs en une seule opération
-    T1_rep = T1.unsqueeze(1).expand(N, N, dim)  # (N, 1, dim) -> (N, N, dim)
-    T2_rep = T2.unsqueeze(0).expand(N, N, dim)  # (1, N, dim) -> (N, N, dim)
-    
-    # Calcul de la norme euclidienne entre chaque paire de vecteurs
-    normes = torch.norm(T1_rep - T2_rep, dim=2)
-    numer = torch.diag(normes)
-    denom = normes.sum(dim=1) - numer
-    
-    loss = -torch.log(numer/denom)
-    loss = loss.mean()
-    loss = loss.item()
-    print(normes)
-    print("Perte (loss) :", loss)
-    
-    tenseur = torch.randn(3, 4, 5)  # Un tenseur de dimensions 3x4x5
-    
-    
-    
-    # Obtenir les dimensions du tenseur
-    dimensions = np.array(tenseur.shape)
-    
-    print("Dimensions du tenseur :", dimensions)
 
 
 
