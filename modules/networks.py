@@ -1,8 +1,9 @@
+# adapted from https://github.com/Yusin2Chen/self-supervised_change_detetction Copyright (c) 2021 Yusin Chen
+
 import torch
 import torch.nn as nn
 import math
 
-__all__ = ['ResNet', ]
 
 class MLPHead(nn.Module):
     def __init__(self, in_channels, mlp_hidden_size, projection_size):
@@ -17,22 +18,26 @@ class MLPHead(nn.Module):
 
     def forward(self, x):
         return self.net(x)
-    
+
 
 def ResNet18(**kwargs):
     return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
+
 def ResNet34(**kwargs):
     return ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
+
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=dilation, groups=groups, bias=False, dilation=dilation)
 
+
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -71,28 +76,33 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_feats=128, width=1, in_channel=3, mi=False):
+    def __init__(self, block, layers, num_feats=4, width=1, in_channel=1, mi=False):
         super(ResNet, self).__init__()
 
         self._norm_layer = nn.BatchNorm2d
         self.inplanes = max(int(64 * width), 64)
         self.base = int(64 * width)
         self.layer0 = nn.Sequential(
-            nn.Conv2d(in_channel, self.inplanes, kernel_size=7, stride=1, padding=3, bias=False),
+            nn.Conv2d(in_channel, self.inplanes, kernel_size=7,
+                      stride=1, padding=3, bias=False),
             self._norm_layer(self.inplanes),
-            nn.ReLU(inplace=True))
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, self.base, layers[0])
-        self.layer2 = self._make_layer(block, self.base * 2, layers[1], stride=1)
-        self.layer3 = self._make_layer(block, self.base * 4, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, self.base * 8, layers[3], stride=2)
+            nn.ReLU(inplace=True)) 
+        self.maxpool = nn.MaxPool2d(
+            kernel_size=3, stride=2, padding=1) 
+        self.layer1 = self._make_layer(
+            block, self.base, layers[0], stride=1)  
+        self.layer2 = self._make_layer(
+            block, self.base * 2, layers[1], stride=1) 
+        self.layer3 = self._make_layer(
+            block, self.base * 4, layers[2], stride=2) 
+        self.layer4 = self._make_layer(
+            block, self.base * 8, layers[3], stride=2) 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         if mi:
             self.final = nn.Linear(512 * block.expansion, num_feats)
         else:
             self.final = MLPHead(512 * block.expansion, 256, num_feats)
-
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -110,7 +120,8 @@ class ResNet(nn.Module):
                 conv1x1(self.inplanes, planes * block.expansion, stride),
                 norm_layer(planes * block.expansion))
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, norm_layer))
+        layers.append(block(self.inplanes, planes,
+                      stride, downsample, norm_layer))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes, norm_layer=norm_layer))
@@ -129,5 +140,3 @@ class ResNet(nn.Module):
         x = self.final(x)
 
         return x
-
-

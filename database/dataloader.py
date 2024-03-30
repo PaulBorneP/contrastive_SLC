@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
 
-from IPython import get_ipython; 
-get_ipython().run_line_magic('reset', '-sf')
+# from IPython import get_ipython; 
+# get_ipython().run_line_magic('reset', '-sf')
 
 # Définition du répertoire de travail
 import os
-os.chdir('c:\\[00]-DATA_CAK\\2023_MVA_ENS\\S2-Remote_Sensing\\PROJET\\Code')
 
 import numpy as np
 import random
 import torch
-from mvalab import *
-from transforms import *
-
+from database.utils import imaread
+import time
 
 #______________________________________________________________________________
 #                           FONCTIONS SUPPORTS
@@ -404,6 +402,7 @@ class BatchMaker:
             Batch[b,1,:,:] = extract_patch(self.Im[:,:,c],
                                   ind_list[i][0],ind_list[i][1],
                                   patch_size[0],patch_size[1])
+            
             
             Area[ind_list[i]] = False   # la position choisie n'est plus disponible
             _ = ind_list.pop(i)         # idem
