@@ -30,8 +30,8 @@ class Trainer:
             logger (Any, optional): Logger for logging training progress. Defaults to None.
         """
 
-        self.online_network = online_network
-        self.target_network = target_network
+        self.online_network = online_network.to(device=device)
+        self.target_network = target_network.to(device=device)
         self.online_network.train()
         self.target_network.train()
         self.optimizer = optimizer
