@@ -56,11 +56,11 @@ class HardNegLoss:
         pos = torch.cat([pos, pos], dim=0)
         Ng = neg.sum(dim=-1)
         exploss = pos / (pos + Ng) + torch.tensor(10**-26, dtype=torch.float32)
-        print(min(exploss))
         # contrastive loss
         loss = (- torch.log(exploss)).mean()
         if torch.isnan(loss) or torch.isinf(loss):
             print(exploss)
+            raise ValueError('Loss is NaN or Inf')
         return loss
 
     def __call__(self, out_1: torch.Tensor, out_2: torch.Tensor) -> torch.Tensor:
