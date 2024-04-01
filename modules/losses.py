@@ -55,7 +55,7 @@ class HardNegLoss:
         pos = torch.exp(torch.sum(out_1 * out_2, dim=-1) / self.temperature)
         pos = torch.cat([pos, pos], dim=0)
         Ng = neg.sum(dim=-1)
-        exploss = pos / (pos + Ng) + 10 ^ -30
+        exploss = pos / (pos + Ng) + torch.tensor(10**-26, dtype=torch.float32)
         print(min(exploss))
         # contrastive loss
         loss = (- torch.log(exploss)).mean()
