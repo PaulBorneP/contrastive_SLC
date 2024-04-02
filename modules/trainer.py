@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 
 class Trainer:
-    def __init__(self, online_network: nn.Module, target_network: nn.Module, optimizer: torch.optim.Optimizer, device: torch.device, n_iter: int = 30000, logger: wandb.wandb_run.Run = None, save_freq: int = 1000, batch_size: int = 50, patch_size=24, save_path: str = 'checkpoints'):
+    def __init__(self, online_network: nn.Module, target_network: nn.Module, optimizer: torch.optim.Optimizer, device: torch.device, temperature=0.5, n_iter: int = 30000, logger: wandb.wandb_run.Run = None, save_freq: int = 1000, batch_size: int = 50, patch_size=24, save_path: str = 'checkpoints'):
         """
         Initialize the Trainer class.
 
@@ -39,12 +39,11 @@ class Trainer:
         self.savepath = save_path
 
         self.max_iter = n_iter
-        self.m = 0.996
         self.batch_size = batch_size
         self.patch_size = patch_size
         self.save_freq = save_freq
         self.criterion = HardNegLoss(
-            batch_size=self.batch_size, device=self.device)
+            batch_size=self.batch_size, device=self.device, temperature=temperature)
         self.logger = logger
 
     def train(self, train_batch_maker: BatchMaker) -> None:
