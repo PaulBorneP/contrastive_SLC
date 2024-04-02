@@ -53,8 +53,8 @@ class Trainer:
                 self.batch_size, self.patch_size)
             batch = torch.tensor(batch, dtype=torch.float32).to(self.device)
             # check if double or float
-            loss,num_zero_pos = self.update(batch)
-            self.logger.log({'zero_pos': num_zero_pos})
+            loss,num_zero = self.update(batch)
+            self.logger.log({'zero_exploss': num_zero})
             self.logger.log({'loss': loss.item()})
             loss.backward()
             self.optimizer.step()

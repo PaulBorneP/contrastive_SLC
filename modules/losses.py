@@ -58,7 +58,7 @@ class HardNegLoss:
         Ng = neg.sum(dim=-1)
         exploss = pos / (pos + Ng + eps) + eps
         # count the number of dim for which pos == 0
-        num_zeros = torch.sum(pos == 0.).item()
+        num_zeros = torch.sum(exploss == eps).item()
         # contrastive loss
         loss = (- torch.log(exploss)).mean()
         if torch.isnan(loss) or torch.isinf(loss):
