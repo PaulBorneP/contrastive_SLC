@@ -4,7 +4,6 @@ import numpy as np
 import random
 import torch
 from contrastive_SLC.database.utils import imaread
-from mvalab import *
 
 
 #______________________________________________________________________________
