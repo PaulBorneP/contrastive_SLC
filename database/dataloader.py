@@ -494,7 +494,7 @@ class BatchMaker:
         # - Pré-traitements
 
         if preproc_norm:
-            from database.transforms import sar_normalization
+            from contrastive_SLC.database.transforms import sar_normalization
             Batch = sar_normalization(Batch)
         
         return Batch, ind_Batch, ind_remaining
