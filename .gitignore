@@ -3,14 +3,11 @@
 
 # Data files
 data/*
-
-### macOS ###
-# General
-.DS_Store
-.AppleDouble
-.LSOverride
-
-#wandb
+train.sh
+contrastive_SLC/checkpoints/*
+log/*
+*.pyc
+download.zip
 wandb/*
 checkpoints/*
 gold/*

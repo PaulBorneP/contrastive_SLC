@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 
 class Trainer:
-    def __init__(self, online_network: nn.Module, target_network: nn.Module, optimizer: torch.optim.Optimizer, device: torch.device, temperature=0.5, n_iter: int = 30000, logger: wandb.wandb_run.Run = None, save_freq: int = 1000, batch_size: int = 50, patch_size=24, save_path: str = 'checkpoints'):
+    def __init__(self, online_network: nn.Module, target_network: nn.Module, optimizer: torch.optim.Optimizer, device: torch.device, temperature=0.5, n_iter: int = 15001, logger: wandb.wandb_run.Run = None, save_freq: int = 5000, batch_size: int = 50, patch_size=24, save_path: str = 'checkpoints'):
         """
         Initialize the Trainer class.
 
