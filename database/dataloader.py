@@ -4,7 +4,7 @@ import numpy as np
 import random
 import torch
 from contrastive_SLC.database.utils import imaread
-from contrastive_SLC.database.transforms import sar_normalization
+from contrastive_SLC.database.transforms import *
 
 
 #______________________________________________________________________________
@@ -347,7 +347,6 @@ class BatchMaker:
             
         # - Pré-traitements
         if preproc_norm:
-            from database.transforms import sar_normalization
             Batch = sar_normalization(Batch)
             
         return Batch, Area
@@ -418,7 +417,6 @@ class BatchMaker:
             
         # - Pré-traitements
         if preproc_norm:
-            from database.transforms import sar_normalization
             Batch = sar_normalization(Batch)
            
         return Batch, Area
