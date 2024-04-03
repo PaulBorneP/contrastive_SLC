@@ -3,7 +3,7 @@
 import numpy as np
 import random
 import torch
-from database.utils import imaread
+from contrastive_SLC.database.utils import imaread
 from mvalab import *
 
 
