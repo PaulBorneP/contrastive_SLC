@@ -56,6 +56,8 @@ class HardNegLoss:
         pos = torch.exp(torch.sum(out_1 * out_2, dim=-1) / self.temperature)
         pos = torch.cat([pos, pos], dim=0)
         Ng = neg.sum(dim=-1)
+        mean_neg = torch.mean(Ng) 
+        mean_pos = torch.mean(pos)
         exploss = pos / (pos + Ng + eps) + eps
         # count the number of dim for which pos == 0
         num_zeros = torch.sum(exploss == eps).item()
@@ -64,7 +66,7 @@ class HardNegLoss:
         if torch.isnan(loss) or torch.isinf(loss):
             print(exploss)
             raise ValueError('Loss is NaN or Inf')
-        return loss, num_zeros
+        return loss, num_zeros, mean_neg, mean_pos
 
     def __call__(self, out_1: torch.Tensor, out_2: torch.Tensor) -> torch.Tensor:
         """

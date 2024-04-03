@@ -53,9 +53,11 @@ class Trainer:
                 self.batch_size, self.patch_size)
             batch = torch.tensor(batch, dtype=torch.float32).to(self.device)
             # check if double or float
-            loss,num_zero = self.update(batch)
+            loss, num_zero, mean_neg, mean_pos = self.update(batch)
             self.logger.log({'zero_exploss': num_zero})
             self.logger.log({'loss': loss.item()})
+            self.logger.log({'mean_neg': mean_neg})
+            self.logger.log({'mean_pos': mean_pos})
             loss.backward()
             self.optimizer.step()
             if i % self.save_freq == 0:
