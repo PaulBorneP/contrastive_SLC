@@ -47,6 +47,7 @@ class HardNegLoss:
             torch.Tensor: The calculated loss.
         """
         # neg score
+        eps = torch.tensor(10**-35, dtype=torch.float32)
         out = torch.cat([out_1, out_2], dim=0)
         neg = torch.exp(torch.mm(out, out.t().contiguous()) / self.temperature)
         mask = self.get_negative_mask().to(self.device)
@@ -55,9 +56,15 @@ class HardNegLoss:
         pos = torch.exp(torch.sum(out_1 * out_2, dim=-1) / self.temperature)
         pos = torch.cat([pos, pos], dim=0)
         Ng = neg.sum(dim=-1)
+        exploss = pos / (pos + Ng + eps) + eps
+        # count the number of dim for which pos == 0
+        num_zeros = torch.sum(exploss == eps).item()
         # contrastive loss
-        loss = (- torch.log(pos / (pos + Ng))).mean()
-        return loss
+        loss = (- torch.log(exploss)).mean()
+        if torch.isnan(loss) or torch.isinf(loss):
+            print(exploss)
+            raise ValueError('Loss is NaN or Inf')
+        return loss, num_zeros
 
     def __call__(self, out_1: torch.Tensor, out_2: torch.Tensor) -> torch.Tensor:
         """

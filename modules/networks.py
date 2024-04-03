@@ -39,7 +39,6 @@ def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
-
 class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_feats=4, width=1, in_channel=1, fc_output=False):
@@ -52,17 +51,17 @@ class ResNet(nn.Module):
             nn.Conv2d(in_channel, self.inplanes, kernel_size=7,
                       stride=1, padding=3, bias=False),
             self._norm_layer(self.inplanes),
-            nn.ReLU(inplace=True)) 
+            nn.ReLU(inplace=True))
         self.maxpool = nn.MaxPool2d(
-            kernel_size=3, stride=2, padding=1) 
+            kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(
-            block, self.base, layers[0], stride=1)  
+            block, self.base, layers[0], stride=1)
         self.layer2 = self._make_layer(
-            block, self.base * 2, layers[1], stride=1) 
+            block, self.base * 2, layers[1], stride=1)
         self.layer3 = self._make_layer(
-            block, self.base * 4, layers[2], stride=2) 
+            block, self.base * 4, layers[2], stride=2)
         self.layer4 = self._make_layer(
-            block, self.base * 8, layers[3], stride=2) 
+            block, self.base * 8, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         if fc_output:
@@ -145,21 +144,23 @@ class BasicBlock(nn.Module):
 
 class SmallResNet(ResNet):
     def __init__(self, block, layers, num_feats=4, width=1, in_channel=1, fc_output=False):
-        super(SmallResNet, self).__init__(block, layers, num_feats, width, in_channel, fc_output)
+        super(SmallResNet, self).__init__(block, layers,
+                                          num_feats, width, in_channel, fc_output)
 
         self._norm_layer = nn.BatchNorm2d
         self.inplanes = max(int(64 * width), 64)
         self.base = int(64 * width)
-        self.layer0 = conv1x1(in_channel, self.inplanes) # fully connected layer to go from 1 channel to 64
+        # fully connected layer to go from 1 channel to 64
+        self.layer0 = conv1x1(in_channel, self.inplanes)
         # no maxpool
         self.layer1 = self._make_layer(
-            block, self.base, layers[0], stride=1)  
+            block, self.base, layers[0], stride=1)
         self.layer2 = self._make_layer(
-            block, self.base * 2, layers[1], stride=2) 
+            block, self.base * 2, layers[1], stride=2)
         self.layer3 = self._make_layer(
-            block, self.base * 4, layers[2], stride=2) 
+            block, self.base * 4, layers[2], stride=2)
         self.layer4 = self._make_layer(
-            block, self.base * 8, layers[3], stride=2) 
+            block, self.base * 8, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         if fc_output:
@@ -181,19 +182,19 @@ class SmallResNet(ResNet):
 
         return x
 
+
 def SmallResNet18(**kwargs):
     return SmallResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+
 
 def SmallResNet34(**kwargs):
     return SmallResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
 
 
-if __name__ == __name__:
+if __name__ == "__main__":
     import torchsummary
     model = ResNet18()
     torchsummary.summary(model, (1, 24, 24))
 
     model = SmallResNet18()
     torchsummary.summary(model, (1, 24, 24))
-
-

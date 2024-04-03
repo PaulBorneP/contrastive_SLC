@@ -5,7 +5,6 @@ import random
 import torch
 from database.utils import imaread
 from mvalab import *
-from transforms import *
 
 
 #______________________________________________________________________________
@@ -348,7 +347,7 @@ class BatchMaker:
             
         # - Pré-traitements
         if preproc_norm:
-            from transforms import sar_normalization
+            from database.transforms import sar_normalization
             Batch = sar_normalization(Batch)
             
         return Batch, Area
@@ -419,7 +418,7 @@ class BatchMaker:
             
         # - Pré-traitements
         if preproc_norm:
-            from transforms import sar_normalization
+            from database.transforms import sar_normalization
             Batch = sar_normalization(Batch)
            
         return Batch, Area
@@ -493,8 +492,9 @@ class BatchMaker:
         Batch = np.array(Batch)
         
         # - Pré-traitements
-        if preproc_norm :
-            from transforms import sar_normalization
+
+        if preproc_norm:
+            from database.transforms import sar_normalization
             Batch = sar_normalization(Batch)
         
         return Batch, ind_Batch, ind_remaining
