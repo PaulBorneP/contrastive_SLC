@@ -11,19 +11,17 @@ from database.dataloader import BatchMaker
 
 patch_size =(24,24)
 batch_size = 50
-num_feats_list = [4,8]
+num_feats_list = [4]
 
 num_iter = 20001
-lrs = [1e-5,1e-4]
-temps =[0.1,0.5]
+lrs = [1e-5]
+temps =[0.1]
 
 
 
 for num_feats in num_feats_list:
   for lr in lrs:
     for temp in temps:
-      if (num_feats == 4) and (lr ==1e-5) and (temps == 0.1):
-        continue
 
       online_network = ResNet34(num_feats=num_feats)
       target_network = ResNet34(num_feats=num_feats)

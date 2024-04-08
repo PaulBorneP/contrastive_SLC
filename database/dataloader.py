@@ -3,8 +3,8 @@
 import numpy as np
 import random
 import torch
-from contrastive_SLC.database.utils import imaread
-from contrastive_SLC.database.transforms import *
+from database.utils import imaread
+from database.transforms import *
 
 
 #______________________________________________________________________________
